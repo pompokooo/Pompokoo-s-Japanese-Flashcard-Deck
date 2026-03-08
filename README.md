@@ -1,1 +1,345 @@
-# Pompokoo-s-Japanese-Flashcard-Deck
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Japanese Flashcards — フラッシュカード</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700&family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0d0d0d; color: #f0ebe3; font-family: 'DM Mono', monospace; }
+    .app {
+      min-height: 100vh;
+      background: #0d0d0d;
+      background-image: radial-gradient(ellipse at 20% 50%, rgba(180,120,60,0.07) 0%, transparent 60%),
+                        radial-gradient(ellipse at 80% 20%, rgba(200,160,80,0.05) 0%, transparent 50%);
+      padding: 40px 20px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .header { text-align: center; margin-bottom: 28px; }
+    .header h1 { font-family: 'DM Serif Display', serif; font-size: 2.2rem; color: #e8c87a; letter-spacing: 0.02em; line-height: 1; }
+    .header .jp-title { font-family: 'Noto Serif JP', serif; font-size: 1rem; color: #8a7a65; margin-top: 4px; font-weight: 300; }
+    .sync-pill {
+      display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+      font-size: 0.62rem; color: #5a5a5a; letter-spacing: 0.08em;
+      background: #141414; border: 1px solid #222; border-radius: 20px; padding: 5px 14px;
+    }
+    .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #3a3a3a; flex-shrink: 0; }
+    .sync-dot.online  { background: #5a9a6a; }
+    .sync-dot.syncing { background: #e8c87a; animation: blink 0.9s infinite; }
+    .sync-dot.error   { background: #c05a5a; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    .tabs { display: flex; gap: 2px; background: #1a1a1a; border-radius: 8px; padding: 4px; margin-bottom: 32px; border: 1px solid #2a2a2a; }
+    .tab { padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; transition: all 0.2s; background: transparent; color: #5a5a5a; }
+    .tab.active { background: #e8c87a; color: #0d0d0d; font-weight: bold; }
+
+    .card-scene { width: 520px; max-width: 100%; height: 300px; perspective: 1200px; margin-bottom: 24px; cursor: pointer; }
+    .card-inner { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.55s cubic-bezier(0.4,0.2,0.2,1); }
+    .card-inner.flipped { transform: rotateY(180deg); }
+    .card-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; border: 1px solid #2e2e2e; }
+    .card-front { background: linear-gradient(135deg, #1a1810 0%, #1e1c14 100%); border-color: #3a3320; }
+    .card-back  { background: linear-gradient(135deg, #12181a 0%, #141e20 100%); border-color: #20303a; transform: rotateY(180deg); }
+    .card-label { font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: #5a5040; position: absolute; top: 14px; left: 18px; }
+    .card-back .card-label { color: #304050; }
+    .card-text { font-family: 'Noto Serif JP', serif; font-size: 2.6rem; color: #f0ebe3; text-align: center; line-height: 1.3; font-weight: 300; }
+    .card-back .card-text { font-size: 1.1rem; font-family: 'DM Serif Display', serif; color: #c8dce8; overflow-y: auto; max-height: 210px; white-space: pre-wrap; text-align: left; width: 100%; }
+    .card-hint { position: absolute; bottom: 14px; font-size: 0.58rem; letter-spacing: 0.15em; color: #3a3530; text-transform: uppercase; }
+    .card-back .card-hint { color: #203040; }
+    .card-empty { color: #3a3530; font-size: 0.8rem; font-style: italic; }
+
+    .controls { display: flex; gap: 10px; margin-bottom: 32px; align-items: center; }
+    .btn { padding: 10px 20px; border-radius: 8px; border: 1px solid #2a2a2a; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; transition: all 0.18s; background: #1a1a1a; color: #9a8a70; }
+    .btn:hover { border-color: #e8c87a; color: #e8c87a; }
+    .btn-primary { background: #e8c87a; color: #0d0d0d; border-color: #e8c87a; font-weight: bold; }
+    .btn-primary:hover { background: #f0d88a; border-color: #f0d88a; color: #0d0d0d; }
+    .btn-sm { padding: 7px 16px; font-size: 0.65rem; }
+    .counter { font-size: 0.7rem; color: #4a4a4a; letter-spacing: 0.1em; min-width: 70px; text-align: center; }
+
+    .form-section { width: 560px; max-width: 100%; background: #111; border: 1px solid #222; border-radius: 16px; padding: 28px; }
+    .form-title { font-family: 'DM Serif Display', serif; font-size: 1.2rem; color: #e8c87a; margin-bottom: 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: #6a6050; margin-bottom: 6px; }
+    .form-group textarea { width: 100%; padding: 12px 14px; background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 8px; color: #f0ebe3; font-family: 'Noto Serif JP', serif; font-size: 1.05rem; font-weight: 300; outline: none; transition: border-color 0.2s; resize: vertical; min-height: 48px; line-height: 1.6; }
+    .form-group textarea.tall { min-height: 120px; }
+    .form-group textarea:focus { border-color: #e8c87a; }
+    .form-group textarea::placeholder { color: #2e2e2e; font-size: 0.82rem; font-family: 'DM Mono', monospace; }
+    .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+
+    .deck-list { width: 560px; max-width: 100%; }
+    .deck-title { font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: #4a4040; margin-bottom: 12px; }
+    .deck-item { background: #111; border: 1px solid #1e1e1e; border-radius: 10px; margin-bottom: 7px; transition: border-color 0.15s; overflow: hidden; }
+    .deck-item:hover { border-color: #2a2a2a; }
+    .deck-item.current { border-color: #3a3020; }
+    .deck-item.editing { border-color: #e8c87a55; background: #14120a; }
+    .deck-row { display: flex; align-items: center; padding: 13px 16px; cursor: pointer; gap: 10px; }
+    .deck-front { font-family: 'Noto Serif JP', serif; font-size: 1.05rem; color: #d0c8b8; font-weight: 300; min-width: 70px; flex-shrink: 0; }
+    .deck-back { font-size: 0.75rem; color: #4a4a5a; font-family: 'DM Mono', monospace; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .deck-actions { display: flex; gap: 2px; flex-shrink: 0; }
+    .icon-btn { background: none; border: 1px solid transparent; cursor: pointer; font-size: 0.82rem; padding: 4px 8px; border-radius: 5px; transition: all 0.15s; color: #3a3030; line-height: 1; }
+    .icon-btn:hover { border-color: #2a2a2a; }
+    .icon-btn.edit:hover { color: #e8c87a; border-color: #3a3020; }
+    .icon-btn.del:hover  { color: #c05a5a; border-color: #3a2020; }
+    .badge { background: #2a2218; color: #7a6030; font-size: 0.58rem; padding: 2px 8px; border-radius: 20px; border: 1px solid #3a3020; flex-shrink: 0; }
+    .edit-form { padding: 4px 16px 16px; border-top: 1px solid #231f12; }
+    .edit-form .form-group { margin-top: 12px; margin-bottom: 10px; }
+    .edit-form textarea.tall { min-height: 80px; }
+
+    .empty-state { text-align: center; color: #3a3530; font-size: 0.78rem; letter-spacing: 0.1em; padding: 40px 0; font-style: italic; }
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: #1a1810; border: 1px solid #3a3020; color: #e8c87a; padding: 10px 22px; border-radius: 8px; font-size: 0.7rem; letter-spacing: 0.1em; opacity: 0; transition: opacity 0.25s; pointer-events: none; z-index: 999; white-space: nowrap; }
+    .toast.show { opacity: 1; }
+    .loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 14px; }
+    .loading-title { font-family: 'DM Serif Display', serif; font-size: 2rem; color: #e8c87a; }
+    .loading-sub { font-size: 0.7rem; color: #4a4040; letter-spacing: 0.12em; }
+    .sync-error-banner { width: 560px; max-width: 100%; background: #1a1010; border: 1px solid #3a1a1a; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.7rem; color: #c07070; letter-spacing: 0.04em; line-height: 1.6; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+  const { useState, useEffect, useRef } = React;
+
+  // ── Google Apps Script URL ────────────────────────────────────────────────
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzHhEnsGxlSpGl0K3v5v5gmf401HElnZ3EuSYGvYKPSuaeMg4VgcMO2lFjwcs8OO2go/exec";
+
+  const LOCAL_KEY = "jp_fc_v5";
+
+  const DEFAULT_CARDS = [
+    { id: 1, front: "日本語",    back: "Japanese language" },
+    { id: 2, front: "ありがとう", back: "Thank you" },
+    { id: 3, front: "猫",        back: "Cat (neko)" },
+  ];
+
+  const lsGet = (k, fb) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch { return fb; } };
+  const lsSet = (k, v)  => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  // ── Google Sheets sync helpers ───────────────────────────────────────────
+  async function sheetRead() {
+    const url = `${SCRIPT_URL}?action=read&t=${Date.now()}`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error("read_failed");
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    return d; // array of cards
+  }
+
+  async function sheetWrite(cards) {
+    const r = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "data=" + encodeURIComponent(JSON.stringify({ cards })),
+    });
+    if (!r.ok) throw new Error("write_failed");
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+  }
+
+  // ── App ──────────────────────────────────────────────────────────────────
+  function App() {
+    const [appReady,   setAppReady]   = useState(false);
+    const [syncStatus, setSyncStatus] = useState("syncing");
+    const [syncError,  setSyncError]  = useState("");
+    const [cards,      setCards]      = useState(() => lsGet(LOCAL_KEY, DEFAULT_CARDS));
+
+    const [tab,       setTab]       = useState("study");
+    const [idx,       setIdx]       = useState(0);
+    const [flipped,   setFlipped]   = useState(false);
+    const [frontIn,   setFrontIn]   = useState("");
+    const [backIn,    setBackIn]    = useState("");
+    const [editId,    setEditId]    = useState(null);
+    const [editFront, setEditFront] = useState("");
+    const [editBack,  setEditBack]  = useState("");
+    const [toast,     setToast]     = useState("");
+
+    const saveTimer = useRef(null);
+    const isFirstLoad = useRef(true);
+
+    const showToast = (m) => { setToast(m); setTimeout(() => setToast(""), 2600); };
+
+    // Initial load from Google Sheets
+    useEffect(() => {
+      sheetRead()
+        .then(remote => {
+          if (Array.isArray(remote) && remote.length > 0) {
+            setCards(remote);
+            lsSet(LOCAL_KEY, remote);
+          }
+          setSyncStatus("online");
+          setSyncError("");
+        })
+        .catch(() => {
+          setSyncStatus("error");
+          setSyncError("Couldn't reach Google Sheets — showing your last saved deck. Changes will sync when connection is restored.");
+        })
+        .finally(() => setAppReady(true));
+    }, []);
+
+    // Auto-save to Sheets whenever cards change (skip the very first render)
+    useEffect(() => {
+      if (!appReady) return;
+      lsSet(LOCAL_KEY, cards);
+      if (isFirstLoad.current) { isFirstLoad.current = false; return; }
+      clearTimeout(saveTimer.current);
+      setSyncStatus("syncing");
+      saveTimer.current = setTimeout(() => {
+        sheetWrite(cards)
+          .then(() => { setSyncStatus("online"); setSyncError(""); })
+          .catch(() => { setSyncStatus("error"); setSyncError("Sync failed — your changes are saved locally and will retry next time."); });
+      }, 1400);
+    }, [cards, appReady]);
+
+    const current = cards[idx] || null;
+    const go = (dir) => { setFlipped(false); setTimeout(() => setIdx(i => (i + dir + cards.length) % cards.length), 40); };
+    const shuffle = () => { setFlipped(false); setCards(c => [...c].sort(() => Math.random() - 0.5)); setIdx(0); };
+
+    const addCard = () => {
+      if (!frontIn.trim() || !backIn.trim()) return;
+      const nc = [...cards, { id: Date.now(), front: frontIn.trim(), back: backIn.trim() }];
+      setCards(nc); setFrontIn(""); setBackIn("");
+      setIdx(nc.length - 1); setFlipped(false); setTab("study");
+      showToast("Card added ✓");
+    };
+
+    const deleteCard = (id, e) => {
+      e.stopPropagation();
+      const nc = cards.filter(c => c.id !== id);
+      setCards(nc); setIdx(i => Math.min(i, Math.max(0, nc.length - 1))); setFlipped(false);
+      showToast("Card deleted");
+    };
+
+    const startEdit = (card, e) => { e.stopPropagation(); setEditId(card.id); setEditFront(card.front); setEditBack(card.back); };
+    const saveEdit  = (id) => {
+      if (!editFront.trim() || !editBack.trim()) return;
+      setCards(cs => cs.map(c => c.id === id ? { ...c, front: editFront.trim(), back: editBack.trim() } : c));
+      setEditId(null); showToast("Card updated ✓");
+    };
+
+    const statusLabel = syncStatus === "online"  ? "synced with Google Sheets"
+                      : syncStatus === "syncing" ? "syncing…"
+                      : "sync error — offline mode";
+
+    // Loading screen
+    if (!appReady) return (
+      <div className="app">
+        <div className="loading-screen">
+          <div className="loading-title">Flash Cards</div>
+          <div className="loading-sub">Syncing with Google Sheets…</div>
+          <div className="sync-dot syncing" style={{width:10,height:10}}/>
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="app">
+        <div className="header">
+          <h1>Flash Cards</h1>
+          <div className="jp-title">フラッシュカード学習</div>
+          <div className="sync-pill">
+            <div className={`sync-dot ${syncStatus}`}/>
+            {statusLabel}
+          </div>
+        </div>
+
+        {syncError && <div className="sync-error-banner">⚠ {syncError}</div>}
+
+        <div className="tabs">
+          <button className={`tab ${tab==="study"?"active":""}`} onClick={() => setTab("study")}>Study</button>
+          <button className={`tab ${tab==="add"?"active":""}`}   onClick={() => setTab("add")}>+ Add</button>
+          <button className={`tab ${tab==="deck"?"active":""}`}  onClick={() => setTab("deck")}>Deck ({cards.length})</button>
+        </div>
+
+        {/* STUDY */}
+        {tab === "study" && (<>
+          <div className="card-scene" onClick={() => setFlipped(f => !f)}>
+            <div className={`card-inner ${flipped?"flipped":""}`}>
+              <div className="card-face card-front">
+                <span className="card-label">Japanese</span>
+                {current ? <div className="card-text">{current.front}</div> : <div className="card-empty">No cards yet — add some!</div>}
+                <span className="card-hint">tap to flip</span>
+              </div>
+              <div className="card-face card-back">
+                <span className="card-label">Meaning</span>
+                {current && <div className="card-text">{current.back}</div>}
+                <span className="card-hint">tap to flip</span>
+              </div>
+            </div>
+          </div>
+          {cards.length > 0 && (
+            <div className="controls">
+              <button className="btn" onClick={() => go(-1)}>← Prev</button>
+              <span className="counter">{idx+1} / {cards.length}</span>
+              <button className="btn" onClick={() => go(1)}>Next →</button>
+              <button className="btn" onClick={shuffle} style={{fontSize:"0.9rem"}} title="Shuffle">⇄</button>
+            </div>
+          )}
+        </>)}
+
+        {/* ADD */}
+        {tab === "add" && (
+          <div className="form-section">
+            <div className="form-title">New Flashcard</div>
+            <div className="form-group">
+              <label>Front — Japanese</label>
+              <textarea value={frontIn} onChange={e => setFrontIn(e.target.value)}
+                placeholder="e.g. 桜 or さくら" autoFocus/>
+            </div>
+            <div className="form-group">
+              <label>Back — Meaning, Reading & Examples</label>
+              <textarea className="tall" value={backIn} onChange={e => setBackIn(e.target.value)}
+                placeholder={"e.g. Cherry blossom (sakura)\n\n🌸 Example: 桜が咲いている。\nThe cherry blossoms are blooming."}/>
+            </div>
+            <button className="btn btn-primary" style={{width:"100%",marginTop:6}} onClick={addCard}>Add Card</button>
+          </div>
+        )}
+
+        {/* DECK */}
+        {tab === "deck" && (
+          <div className="deck-list">
+            <div className="deck-title">{cards.length} card{cards.length!==1?"s":""} in deck</div>
+            {cards.length === 0
+              ? <div className="empty-state">No cards yet — go add some!</div>
+              : cards.map((card, i) => (
+                <div key={card.id} className={`deck-item ${i===idx?"current":""} ${editId===card.id?"editing":""}`}>
+                  <div className="deck-row" onClick={() => { if (editId!==card.id) { setIdx(i); setFlipped(false); setTab("study"); } }}>
+                    <span className="deck-front">{card.front}</span>
+                    <span className="deck-back">{card.back}</span>
+                    {i===idx && <span className="badge">now</span>}
+                    <div className="deck-actions">
+                      <button className="icon-btn edit" title="Edit"   onClick={e => editId===card.id ? setEditId(null) : startEdit(card,e)}>✎</button>
+                      <button className="icon-btn del"  title="Delete" onClick={e => deleteCard(card.id,e)}>✕</button>
+                    </div>
+                  </div>
+                  {editId === card.id && (
+                    <div className="edit-form">
+                      <div className="form-group">
+                        <label>Front — Japanese</label>
+                        <textarea value={editFront} onChange={e => setEditFront(e.target.value)}/>
+                      </div>
+                      <div className="form-group">
+                        <label>Back — Meaning & Examples</label>
+                        <textarea className="tall" value={editBack} onChange={e => setEditBack(e.target.value)}/>
+                      </div>
+                      <div className="btn-row">
+                        <button className="btn btn-primary btn-sm" onClick={() => saveEdit(card.id)}>Save changes</button>
+                        <button className="btn btn-sm" onClick={() => setEditId(null)}>Cancel</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            }
+          </div>
+        )}
+
+        <div className={`toast ${toast?"show":""}`}>{toast}</div>
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
