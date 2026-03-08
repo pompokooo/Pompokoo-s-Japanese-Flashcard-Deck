@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>覚えよう！</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700&family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #0d0d0d; color: #f0ebe3; font-family: 'DM Mono', monospace; }
+    .app {
+      min-height: 100vh;
+      background: #0d0d0d;
+      background-image: radial-gradient(ellipse at 20% 50%, rgba(180,120,60,0.07) 0%, transparent 60%),
+                        radial-gradient(ellipse at 80% 20%, rgba(200,160,80,0.05) 0%, transparent 50%);
+      padding: 40px 20px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+
+    /* ── HEADER ── */
+    .header { text-align: center; margin-bottom: 32px; }
+    .header h1 { font-family: 'Noto Serif JP', serif; font-size: clamp(1.1rem, 4vw, 1.7rem); color: #e8c87a; letter-spacing: 0.02em; line-height: 1.3; font-weight: 700; }
+    .header .jp-title { font-family: 'Noto Serif JP', serif; font-size: clamp(0.7rem, 2.5vw, 0.88rem); color: #8a7a65; margin-top: 8px; font-weight: 300; line-height: 1.6; max-width: 480px; }
+    .sync-pill { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-size: 0.62rem; color: #5a5a5a; letter-spacing: 0.08em; background: #141414; border: 1px solid #222; border-radius: 20px; padding: 5px 14px; }
+    .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #3a3a3a; flex-shrink: 0; }
+    .sync-dot.online  { background: #5a9a6a; }
+    .sync-dot.syncing { background: #e8c87a; animation: blink 0.9s infinite; }
+    .sync-dot.error   { background: #c05a5a; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ── BUTTONS ── */
+    .btn { padding: 10px 20px; border-radius: 8px; border: 1px solid #2a2a2a; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; transition: all 0.18s; background: #1a1a1a; color: #9a8a70; }
+    .btn:hover { border-color: #e8c87a; color: #e8c87a; }
+    .btn-primary { background: #e8c87a; color: #0d0d0d; border-color: #e8c87a; font-weight: bold; }
+    .btn-primary:hover { background: #f0d88a; border-color: #f0d88a; color: #0d0d0d; }
+    .btn-sm { padding: 7px 14px; font-size: 0.65rem; }
+    .btn-ghost { background: transparent; border-color: transparent; color: #5a5a5a; }
+    .btn-ghost:hover { border-color: #2a2a2a; color: #9a8a70; }
+    .btn-row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+
+    /* ── TABS ── */
+    .tabs { display: flex; gap: 2px; background: #1a1a1a; border-radius: 8px; padding: 4px; margin-bottom: 32px; border: 1px solid #2a2a2a; }
+    .tab { padding: 8px 18px; border-radius: 6px; border: none; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; transition: all 0.2s; background: transparent; color: #5a5a5a; }
+    .tab.active { background: #e8c87a; color: #0d0d0d; font-weight: bold; }
+
+    /* ── DASHBOARD ── */
+    .dashboard { width: 560px; max-width: 100%; }
+    .dashboard-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .dashboard-title { font-family: 'DM Serif Display', serif; font-size: 1.4rem; color: #e8c87a; }
+    .deck-list-item {
+      background: #111; border: 1px solid #1e1e1e; border-radius: 12px;
+      margin-bottom: 10px; padding: 18px 20px;
+      display: flex; align-items: center; gap: 14px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .deck-list-item:hover { border-color: #3a3020; background: #141410; }
+    .deck-list-item-info { flex: 1; min-width: 0; }
+    .deck-list-item-name { font-family: 'DM Serif Display', serif; font-size: 1.1rem; color: #e8d8b0; margin-bottom: 4px; }
+    .deck-list-item-meta { font-size: 0.65rem; color: #5a5040; letter-spacing: 0.08em; display: flex; gap: 14px; flex-wrap: wrap; }
+    .due-badge { color: #e8a050; font-weight: bold; }
+    .deck-list-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .icon-btn { background: none; border: 1px solid transparent; cursor: pointer; font-size: 0.82rem; padding: 4px 8px; border-radius: 5px; transition: all 0.15s; color: #3a3030; line-height: 1; }
+    .icon-btn:hover { border-color: #2a2a2a; }
+    .icon-btn.edit:hover { color: #e8c87a; border-color: #3a3020; }
+    .icon-btn.del:hover  { color: #c05a5a; border-color: #3a2020; }
+
+    /* new deck form */
+    .new-deck-form { background: #111; border: 1px solid #222; border-radius: 12px; padding: 20px; margin-bottom: 10px; }
+    .new-deck-input { width: 100%; padding: 11px 14px; background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 8px; color: #f0ebe3; font-family: 'DM Serif Display', serif; font-size: 1rem; outline: none; transition: border-color 0.2s; margin-bottom: 10px; }
+    .new-deck-input:focus { border-color: #e8c87a; }
+    .new-deck-input::placeholder { color: #2e2e2e; font-family: 'DM Mono', monospace; font-size: 0.82rem; }
+
+    /* ── DECK VIEW (inside a deck) ── */
+    .deck-view { width: 560px; max-width: 100%; }
+    .back-btn { display: inline-flex; align-items: center; gap: 6px; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #5a5040; cursor: pointer; background: none; border: none; margin-bottom: 20px; padding: 0; transition: color 0.15s; }
+    .back-btn:hover { color: #e8c87a; }
+    .deck-view-header { margin-bottom: 24px; }
+    .deck-view-name { font-family: 'DM Serif Display', serif; font-size: 1.8rem; color: #e8c87a; margin-bottom: 4px; }
+    .deck-view-meta { font-size: 0.65rem; color: #5a5040; letter-spacing: 0.08em; display: flex; gap: 14px; flex-wrap: wrap; }
+
+    /* ── CARD ── */
+    .card-scene { width: 520px; max-width: 100%; height: 300px; perspective: 1200px; margin-bottom: 24px; cursor: pointer; }
+    .card-inner { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.55s cubic-bezier(0.4,0.2,0.2,1); }
+    .card-inner.flipped { transform: rotateY(180deg); }
+    .card-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px; border: 1px solid #2e2e2e; }
+    .card-front { background: linear-gradient(135deg, #1a1810 0%, #1e1c14 100%); border-color: #3a3320; }
+    .card-back  { background: linear-gradient(135deg, #12181a 0%, #141e20 100%); border-color: #20303a; transform: rotateY(180deg); }
+    .card-label { font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase; color: #5a5040; position: absolute; top: 14px; left: 18px; }
+    .card-back .card-label { color: #304050; }
+    .card-text { font-family: 'Noto Serif JP', serif; font-size: 2.6rem; color: #f0ebe3; text-align: center; line-height: 1.3; font-weight: 300; }
+    .card-back .card-text { font-size: 1.1rem; font-family: 'DM Serif Display', serif; color: #c8dce8; overflow-y: auto; max-height: 210px; white-space: pre-wrap; text-align: left; width: 100%; }
+    .card-hint { position: absolute; bottom: 14px; font-size: 0.58rem; letter-spacing: 0.15em; color: #3a3530; text-transform: uppercase; }
+    .card-back .card-hint { color: #203040; }
+    .card-empty { color: #3a3530; font-size: 0.8rem; font-style: italic; text-align: center; line-height: 1.7; }
+    .card-progress { position: absolute; top: 14px; right: 18px; font-size: 0.6rem; color: #4a4040; letter-spacing: 0.08em; }
+
+    /* ── SRS RATING BUTTONS ── */
+    .srs-btns { display: flex; gap: 10px; margin-bottom: 28px; width: 520px; max-width: 100%; }
+    .srs-btn { flex: 1; padding: 12px 8px; border-radius: 10px; border: 1px solid; cursor: pointer; font-family: 'DM Mono', monospace; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; transition: all 0.18s; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .srs-btn .srs-label { font-size: 0.75rem; font-weight: bold; }
+    .srs-btn .srs-interval { font-size: 0.58rem; opacity: 0.7; }
+    .srs-hard   { background: #1a0f0f; border-color: #5a2020; color: #c07070; }
+    .srs-hard:hover   { background: #2a1010; border-color: #c05a5a; color: #e07070; }
+    .srs-medium { background: #131318; border-color: #3a3060; color: #8878c0; }
+    .srs-medium:hover { background: #1a1a22; border-color: #7060c0; color: #a898e0; }
+    .srs-easy   { background: #0f1a10; border-color: #205a30; color: #60a870; }
+    .srs-easy:hover   { background: #101e12; border-color: #40a860; color: #70c880; }
+
+    /* ── FORM ── */
+    .form-section { width: 560px; max-width: 100%; background: #111; border: 1px solid #222; border-radius: 16px; padding: 28px; }
+    .form-title { font-family: 'DM Serif Display', serif; font-size: 1.2rem; color: #e8c87a; margin-bottom: 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: #6a6050; margin-bottom: 6px; }
+    .form-group textarea, .form-group select { width: 100%; padding: 12px 14px; background: #0d0d0d; border: 1px solid #2a2a2a; border-radius: 8px; color: #f0ebe3; font-family: 'Noto Serif JP', serif; font-size: 1.05rem; font-weight: 300; outline: none; transition: border-color 0.2s; resize: vertical; min-height: 48px; line-height: 1.6; }
+    .form-group select { font-family: 'DM Mono', monospace; font-size: 0.82rem; resize: none; min-height: unset; cursor: pointer; }
+    .form-group textarea.tall { min-height: 120px; }
+    .form-group textarea:focus, .form-group select:focus { border-color: #e8c87a; }
+    .form-group textarea::placeholder { color: #2e2e2e; font-size: 0.82rem; font-family: 'DM Mono', monospace; }
+
+    /* ── CARD LIST (inside deck) ── */
+    .card-list-item { background: #111; border: 1px solid #1e1e1e; border-radius: 10px; margin-bottom: 7px; overflow: hidden; transition: border-color 0.15s; }
+    .card-list-item:hover { border-color: #2a2a2a; }
+    .card-list-item.editing { border-color: #e8c87a55; background: #14120a; }
+    .card-row { display: flex; align-items: center; padding: 12px 16px; cursor: pointer; gap: 10px; }
+    .card-front-text { font-family: 'Noto Serif JP', serif; font-size: 1.05rem; color: #d0c8b8; font-weight: 300; min-width: 70px; flex-shrink: 0; }
+    .card-back-text  { font-size: 0.75rem; color: #4a4a5a; font-family: 'DM Mono', monospace; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card-srs-info { font-size: 0.6rem; color: #4a4040; letter-spacing: 0.06em; flex-shrink: 0; text-align: right; }
+    .card-srs-info.due { color: #e8a050; }
+    .edit-form { padding: 4px 16px 16px; border-top: 1px solid #231f12; }
+    .edit-form .form-group { margin-top: 12px; margin-bottom: 10px; }
+    .edit-form textarea.tall { min-height: 80px; }
+
+    /* ── MISC ── */
+    .empty-state { text-align: center; color: #3a3530; font-size: 0.78rem; letter-spacing: 0.1em; padding: 40px 0; font-style: italic; line-height: 1.8; }
+    .section-label { font-size: 0.62rem; letter-spacing: 0.18em; text-transform: uppercase; color: #4a4040; margin-bottom: 12px; margin-top: 24px; }
+    .toast { position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%); background: #1a1810; border: 1px solid #3a3020; color: #e8c87a; padding: 10px 22px; border-radius: 8px; font-size: 0.7rem; letter-spacing: 0.1em; opacity: 0; transition: opacity 0.25s; pointer-events: none; z-index: 999; white-space: nowrap; }
+    .toast.show { opacity: 1; }
+    .loading-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 14px; }
+    .loading-title { font-family: 'DM Serif Display', serif; font-size: 2rem; color: #e8c87a; }
+    .loading-sub { font-size: 0.7rem; color: #4a4040; letter-spacing: 0.12em; }
+    .sync-error-banner { width: 560px; max-width: 100%; background: #1a1010; border: 1px solid #3a1a1a; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; font-size: 0.7rem; color: #c07070; letter-spacing: 0.04em; line-height: 1.6; }
+    .badge { background: #2a2218; color: #7a6030; font-size: 0.58rem; padding: 2px 8px; border-radius: 20px; border: 1px solid #3a3020; flex-shrink: 0; }
+    .all-done { text-align: center; padding: 20px 0 10px; }
+    .all-done-title { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: #e8c87a; margin-bottom: 8px; }
+    .all-done-sub { font-size: 0.72rem; color: #5a5040; letter-spacing: 0.08em; line-height: 1.8; }
+    .progress-bar-wrap { width: 520px; max-width: 100%; height: 3px; background: #1e1e1e; border-radius: 2px; margin-bottom: 20px; }
+    .progress-bar { height: 100%; background: #e8c87a; border-radius: 2px; transition: width 0.4s; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+  const { useState, useEffect, useRef } = React;
+
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw9DEbDNkZF6WN67y0qh8G7iU_WDckU5O0BHEmbQb6Xq4d3z9N5oHpgrVHUhMUBGvc/exec";
+  const LOCAL_KEY  = "jp_fc_v6";
+
+  // ── SRS algorithm ────────────────────────────────────────────────────────
+  // dueAt: timestamp (ms). Intervals: Hard=10min, Medium=1h, Easy=3days
+
+  const INTERVALS = {
+    0: 10 * 60 * 1000,          // Hard  — 10 minutes
+    1: 60 * 60 * 1000,          // Medium — 1 hour
+    2: 3 * 24 * 60 * 60 * 1000, // Easy  — 3 days
+  };
+
+  const INTERVAL_LABELS = { 0: "10 min", 1: "1 hour", 2: "3 days" };
+
+  function isDue(card) {
+    if (!card.dueAt) return true; // new card, never reviewed
+    return Date.now() >= card.dueAt;
+  }
+
+  function applyRating(card, rating) {
+    const dueAt = Date.now() + INTERVALS[rating];
+    return { ...card, dueAt, lastRating: rating };
+  }
+
+  function intervalLabel(card) {
+    if (!card.dueAt) return "new";
+    if (isDue(card)) return "due now";
+    const ms = card.dueAt - Date.now();
+    const mins = Math.round(ms / 60000);
+    if (mins < 60) return `due in ${mins}m`;
+    const hrs = Math.round(ms / 3600000);
+    if (hrs < 24) return `due in ${hrs}h`;
+    const days = Math.round(ms / 86400000);
+    return `due in ${days}d`;
+  }
+
+  function nextIntervalLabel(rating) {
+    return INTERVAL_LABELS[rating];
+  }
+
+  // ── Default data ──────────────────────────────────────────────────────────
+  const DEFAULT_DECKS = [
+    {
+      id: "deck_1",
+      name: "General Japanese",
+      cards: [
+        { id: 1, front: "日本語",    back: "Japanese language" },
+        { id: 2, front: "ありがとう", back: "Thank you" },
+        { id: 3, front: "猫",        back: "Cat (neko)" },
+      ]
+    }
+  ];
+
+  const lsGet = (k, fb) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fb; } catch { return fb; } };
+  const lsSet = (k, v)  => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  // ── Sync ──────────────────────────────────────────────────────────────────
+  async function sheetRead() {
+    const r = await fetch(`${SCRIPT_URL}?action=read&t=${Date.now()}`);
+    if (!r.ok) throw new Error("read_failed");
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    return d;
+  }
+
+  async function sheetWrite(data) {
+    const r = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "data=" + encodeURIComponent(JSON.stringify(data)),
+    });
+    if (!r.ok) throw new Error("write_failed");
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+  }
+
+  // ── App ───────────────────────────────────────────────────────────────────
+  function App() {
+    const [appReady,    setAppReady]    = useState(false);
+    const [syncStatus,  setSyncStatus]  = useState("syncing");
+    const [syncError,   setSyncError]   = useState("");
+    const [decks,       setDecks]       = useState(() => lsGet(LOCAL_KEY, DEFAULT_DECKS));
+
+    // Navigation: "dashboard" | "deck" | "study" | "add" | "cards"
+    const [view,        setView]        = useState("dashboard");
+    const [activeDeckId,setActiveDeckId]= useState(null);
+    const [deckTab,     setDeckTab]     = useState("study"); // study | add | cards
+
+    // Study session
+    const [studyQueue,  setStudyQueue]  = useState([]);
+    const [studyIdx,    setStudyIdx]    = useState(0);
+    const [flipped,     setFlipped]     = useState(false);
+    const [sessionDone, setSessionDone] = useState(false);
+
+    // Forms
+    const [frontIn,     setFrontIn]     = useState("");
+    const [backIn,      setBackIn]      = useState("");
+    const [editId,      setEditId]      = useState(null);
+    const [editFront,   setEditFront]   = useState("");
+    const [editBack,    setEditBack]    = useState("");
+    const [newDeckName, setNewDeckName] = useState("");
+    const [showNewDeck, setShowNewDeck] = useState(false);
+    const [editDeckId,  setEditDeckId]  = useState(null);
+    const [editDeckName,setEditDeckName]= useState("");
+
+    const [toast,       setToast]       = useState("");
+    const saveTimer = useRef(null);
+    const isFirst   = useRef(true);
+
+    const showToast = (m) => { setToast(m); setTimeout(() => setToast(""), 2600); };
+
+    // Initial load
+    useEffect(() => {
+      sheetRead()
+        .then(remote => {
+          if (remote && remote.decks && remote.decks.length > 0) {
+            setDecks(remote.decks);
+            lsSet(LOCAL_KEY, remote.decks);
+          }
+          setSyncStatus("online"); setSyncError("");
+        })
+        .catch(() => { setSyncStatus("error"); setSyncError("Couldn't reach Google Sheets — showing last saved data."); })
+        .finally(() => setAppReady(true));
+    }, []);
+
+    // Auto-save
+    useEffect(() => {
+      if (!appReady) return;
+      lsSet(LOCAL_KEY, decks);
+      if (isFirst.current) { isFirst.current = false; return; }
+      clearTimeout(saveTimer.current);
+      setSyncStatus("syncing");
+      saveTimer.current = setTimeout(() => {
+        sheetWrite({ decks })
+          .then(() => { setSyncStatus("online"); setSyncError(""); })
+          .catch(() => { setSyncStatus("error"); setSyncError("Sync failed — saved locally, will retry."); });
+      }, 1400);
+    }, [decks, appReady]);
+
+    // ── Helpers ──
+    const activeDeck = decks.find(d => d.id === activeDeckId) || null;
+    const dueCards   = activeDeck ? activeDeck.cards.filter(isDue) : [];
+    const totalCards = activeDeck ? activeDeck.cards.length : 0;
+
+    const updateDecks = (fn) => setDecks(ds => ds.map(d => d.id === activeDeckId ? fn(d) : d));
+
+    // ── Start study session ──
+    const startStudy = (deck) => {
+      const due = deck.cards.filter(isDue);
+      if (due.length === 0) { setStudyQueue([]); setSessionDone(true); }
+      else {
+        const shuffled = [...due].sort(() => Math.random() - 0.5);
+        setStudyQueue(shuffled);
+        setSessionDone(false);
+      }
+      setStudyIdx(0);
+      setFlipped(false);
+    };
+
+    // Study Again — re-queues ALL cards regardless of due status
+    const startStudyAll = (deck) => {
+      if (!deck || deck.cards.length === 0) return;
+      const shuffled = [...deck.cards].sort(() => Math.random() - 0.5);
+      setStudyQueue(shuffled);
+      setSessionDone(false);
+      setStudyIdx(0);
+      setFlipped(false);
+    };
+
+    const openDeck = (deck) => {
+      setActiveDeckId(deck.id);
+      setView("deck");
+      setDeckTab("study");
+      startStudy(deck);
+    };
+
+    // ── Rate card ──
+    const rateCard = (rating) => {
+      const card = studyQueue[studyIdx];
+      const updated = applyRating(card, rating);
+      // Save SRS data back to deck
+      updateDecks(d => ({ ...d, cards: d.cards.map(c => c.id === card.id ? updated : c) }));
+      // Advance queue
+      const nextIdx = studyIdx + 1;
+      if (nextIdx >= studyQueue.length) {
+        setSessionDone(true);
+      } else {
+        setStudyIdx(nextIdx);
+        setFlipped(false);
+      }
+    };
+
+    // ── Deck CRUD ──
+    const createDeck = () => {
+      if (!newDeckName.trim()) return;
+      const nd = { id: `deck_${Date.now()}`, name: newDeckName.trim(), cards: [] };
+      setDecks(ds => [...ds, nd]);
+      setNewDeckName(""); setShowNewDeck(false);
+      showToast("Deck created ✓");
+    };
+
+    const deleteDeck = (id) => {
+      if (!confirm("Delete this deck and all its cards?")) return;
+      setDecks(ds => ds.filter(d => d.id !== id));
+      showToast("Deck deleted");
+    };
+
+    const saveDeckName = (id) => {
+      if (!editDeckName.trim()) return;
+      setDecks(ds => ds.map(d => d.id === id ? { ...d, name: editDeckName.trim() } : d));
+      setEditDeckId(null); showToast("Deck renamed ✓");
+    };
+
+    // ── Card CRUD ──
+    const addCard = () => {
+      if (!frontIn.trim() || !backIn.trim()) return;
+      const nc = { id: Date.now(), front: frontIn.trim(), back: backIn.trim() };
+      updateDecks(d => ({ ...d, cards: [...d.cards, nc] }));
+      setFrontIn(""); setBackIn("");
+      showToast("Card added ✓");
+      setDeckTab("cards");
+    };
+
+    const deleteCard = (cid, e) => {
+      e.stopPropagation();
+      updateDecks(d => ({ ...d, cards: d.cards.filter(c => c.id !== cid) }));
+      showToast("Card deleted");
+    };
+
+    const startEdit = (card, e) => { e.stopPropagation(); setEditId(card.id); setEditFront(card.front); setEditBack(card.back); };
+    const saveEdit  = (cid) => {
+      if (!editFront.trim() || !editBack.trim()) return;
+      updateDecks(d => ({ ...d, cards: d.cards.map(c => c.id === cid ? { ...c, front: editFront.trim(), back: editBack.trim() } : c) }));
+      setEditId(null); showToast("Card updated ✓");
+    };
+
+    const statusLabel = syncStatus === "online" ? "synced" : syncStatus === "syncing" ? "syncing…" : "sync error";
+
+    // ── LOADING ──
+    if (!appReady) return (
+      <div className="app">
+        <div className="loading-screen">
+          <div className="loading-title">覚えよう！</div>
+          <div className="loading-sub">同期中...</div>
+          <div className="sync-dot syncing" style={{width:10,height:10,marginTop:4}}/>
+        </div>
+      </div>
+    );
+
+    const studyCard = studyQueue[studyIdx] || null;
+    const progress  = studyQueue.length > 0 ? (studyIdx / studyQueue.length) * 100 : 0;
+
+    return (
+      <div className="app">
+        <div className="header">
+          <h1>覚えよう！</h1>
+          <div className="jp-title">「夢を叶えるために、一生懸命勉強しましょう、ダレル」</div>
+          <div className="sync-pill">
+            <div className={`sync-dot ${syncStatus}`}/>
+            {statusLabel}
+          </div>
+        </div>
+
+        {syncError && <div className="sync-error-banner">⚠ {syncError}</div>}
+
+        {/* ════════════ DASHBOARD ════════════ */}
+        {view === "dashboard" && (
+          <div className="dashboard">
+            <div className="dashboard-header">
+              <div className="dashboard-title">日本語知識保管庫</div>
+              <button className="btn btn-primary btn-sm" onClick={() => setShowNewDeck(v => !v)}>+ New Deck</button>
+            </div>
+
+            {showNewDeck && (
+              <div className="new-deck-form">
+                <input className="new-deck-input" value={newDeckName} onChange={e => setNewDeckName(e.target.value)}
+                  placeholder="Deck name e.g. JLPT N5, Verbs, Food…"
+                  onKeyDown={e => e.key === "Enter" && createDeck()} autoFocus/>
+                <div className="btn-row">
+                  <button className="btn btn-primary btn-sm" onClick={createDeck}>Create</button>
+                  <button className="btn btn-sm" onClick={() => setShowNewDeck(false)}>Cancel</button>
+                </div>
+              </div>
+            )}
+
+            {decks.length === 0
+              ? <div className="empty-state">No decks yet.<br/>Create your first deck above!</div>
+              : decks.map(deck => {
+                  const due = deck.cards.filter(isDue).length;
+                  return (
+                    <div key={deck.id} className="deck-list-item" onClick={() => {
+                      if (editDeckId === deck.id) return;
+                      openDeck(deck);
+                    }}>
+                      <div className="deck-list-item-info">
+                        {editDeckId === deck.id
+                          ? <input className="new-deck-input" style={{marginBottom:0}} value={editDeckName}
+                              onChange={e => setEditDeckName(e.target.value)}
+                              onKeyDown={e => { if(e.key==="Enter") saveDeckName(deck.id); if(e.key==="Escape") setEditDeckId(null); }}
+                              onClick={e => e.stopPropagation()} autoFocus/>
+                          : <>
+                              <div className="deck-list-item-name">{deck.name}</div>
+                              <div className="deck-list-item-meta">
+                                <span>{deck.cards.length} card{deck.cards.length !== 1 ? "s" : ""}</span>
+                                {due > 0 && <span className="due-badge">⚡ {due} due</span>}
+                                {due === 0 && deck.cards.length > 0 && <span style={{color:"#5a8a5a"}}>✓ all caught up</span>}
+                              </div>
+                            </>
+                        }
+                      </div>
+                      <div className="deck-list-actions" onClick={e => e.stopPropagation()}>
+                        {editDeckId === deck.id
+                          ? <>
+                              <button className="icon-btn edit" onClick={() => saveDeckName(deck.id)}>✓</button>
+                              <button className="icon-btn" onClick={() => setEditDeckId(null)}>✕</button>
+                            </>
+                          : <>
+                              <button className="icon-btn edit" onClick={e => { e.stopPropagation(); setEditDeckId(deck.id); setEditDeckName(deck.name); }}>✎</button>
+                              <button className="icon-btn del"  onClick={e => { e.stopPropagation(); deleteDeck(deck.id); }}>✕</button>
+                            </>
+                        }
+                      </div>
+                    </div>
+                  );
+                })
+            }
+          </div>
+        )}
+
+        {/* ════════════ DECK VIEW ════════════ */}
+        {view === "deck" && activeDeck && (<>
+          <div className="deck-view">
+            <button className="back-btn" onClick={() => setView("dashboard")}>← All Decks</button>
+            <div className="deck-view-header">
+              <div className="deck-view-name">{activeDeck.name}</div>
+              <div className="deck-view-meta">
+                <span>{totalCards} card{totalCards !== 1 ? "s" : ""}</span>
+                {dueCards.length > 0
+                  ? <span className="due-badge">⚡ {dueCards.length} due today</span>
+                  : totalCards > 0 ? <span style={{color:"#5a8a5a"}}>✓ all caught up</span> : null
+                }
+              </div>
+            </div>
+          </div>
+
+          <div className="tabs">
+            <button className={`tab ${deckTab==="study"?"active":""}`} onClick={() => { setDeckTab("study"); const fresh = decks.find(d => d.id === activeDeckId); startStudy(fresh || activeDeck); }}>Study</button>
+            <button className={`tab ${deckTab==="add"?"active":""}`}   onClick={() => setDeckTab("add")}>+ Add</button>
+            <button className={`tab ${deckTab==="cards"?"active":""}`} onClick={() => setDeckTab("cards")}>Cards ({totalCards})</button>
+          </div>
+
+          {/* STUDY TAB */}
+          {deckTab === "study" && (<>
+            {totalCards === 0 && (
+              <div className="empty-state">No cards in this deck yet.<br/>Head to <strong>+ Add</strong> to create some!</div>
+            )}
+
+            {totalCards > 0 && sessionDone && (
+              <div className="all-done">
+                <div className="all-done-title">🎉 All done!</div>
+                <div className="all-done-sub">
+                  You've reviewed all due cards for today.<br/>
+                  Come back tomorrow for your next session!
+                </div>
+                <div className="btn-row" style={{justifyContent:"center",marginTop:20}}>
+                  <button className="btn btn-primary" onClick={() => { const fresh = decks.find(d => d.id === activeDeckId); startStudyAll(fresh || activeDeck); }}>Study Again</button>
+                  <button className="btn" onClick={() => setDeckTab("cards")}>View Cards</button>
+                </div>
+              </div>
+            )}
+
+            {totalCards > 0 && !sessionDone && studyCard && (<>
+              <div className="progress-bar-wrap">
+                <div className="progress-bar" style={{width: progress + "%"}}/>
+              </div>
+
+              <div className="card-scene" onClick={() => setFlipped(f => !f)}>
+                <div className={`card-inner ${flipped?"flipped":""}`}>
+                  <div className="card-face card-front">
+                    <span className="card-label">Japanese</span>
+                    <span className="card-progress">{studyIdx+1}/{studyQueue.length}</span>
+                    <div className="card-text">{studyCard.front}</div>
+                    <span className="card-hint">tap to reveal</span>
+                  </div>
+                  <div className="card-face card-back">
+                    <span className="card-label">Meaning</span>
+                    <div className="card-text">{studyCard.back}</div>
+                    <span className="card-hint">rate yourself below</span>
+                  </div>
+                </div>
+              </div>
+
+              {flipped
+                ? <div className="srs-btns">
+                    <button className="srs-btn srs-hard"   onClick={() => rateCard(0)}>
+                      <span className="srs-label">Hard</span>
+                      <span className="srs-interval">{nextIntervalLabel(0)}</span>
+                    </button>
+                    <button className="srs-btn srs-medium" onClick={() => rateCard(1)}>
+                      <span className="srs-label">Medium</span>
+                      <span className="srs-interval">{nextIntervalLabel(1)}</span>
+                    </button>
+                    <button className="srs-btn srs-easy"   onClick={() => rateCard(2)}>
+                      <span className="srs-label">Easy</span>
+                      <span className="srs-interval">{nextIntervalLabel(2)}</span>
+                    </button>
+                  </div>
+                : <div style={{height:62, marginBottom:28}}/>
+              }
+            </>)}
+          </>)}
+
+          {/* ADD TAB */}
+          {deckTab === "add" && (
+            <div className="form-section">
+              <div className="form-title">New Card</div>
+              <div className="form-group">
+                <label>Front — Japanese</label>
+                <textarea value={frontIn} onChange={e => setFrontIn(e.target.value)} placeholder="e.g. 桜 or さくら" autoFocus/>
+              </div>
+              <div className="form-group">
+                <label>Back — Meaning, Reading & Examples</label>
+                <textarea className="tall" value={backIn} onChange={e => setBackIn(e.target.value)}
+                  placeholder={"e.g. Cherry blossom (sakura)\n\n🌸 Example: 桜が咲いている。\nThe cherry blossoms are blooming."}/>
+              </div>
+              <button className="btn btn-primary" style={{width:"100%",marginTop:6}} onClick={addCard}>Add Card</button>
+            </div>
+          )}
+
+          {/* CARDS TAB */}
+          {deckTab === "cards" && (
+            <div className="deck-view" style={{marginTop:0}}>
+              <div className="section-label" style={{marginTop:0}}>{totalCards} card{totalCards!==1?"s":""} in deck</div>
+              {totalCards === 0
+                ? <div className="empty-state">No cards yet!</div>
+                : activeDeck.cards.map(card => (
+                  <div key={card.id} className={`card-list-item ${editId===card.id?"editing":""}`}>
+                    <div className="card-row">
+                      <span className="card-front-text">{card.front}</span>
+                      <span className="card-back-text">{card.back}</span>
+                      <span className={`card-srs-info ${isDue(card)?"due":""}`}>{intervalLabel(card)}</span>
+                      <div className="deck-list-actions">
+                        <button className="icon-btn edit" onClick={e => editId===card.id ? setEditId(null) : startEdit(card,e)}>✎</button>
+                        <button className="icon-btn del"  onClick={e => deleteCard(card.id,e)}>✕</button>
+                      </div>
+                    </div>
+                    {editId === card.id && (
+                      <div className="edit-form">
+                        <div className="form-group">
+                          <label>Front — Japanese</label>
+                          <textarea value={editFront} onChange={e => setEditFront(e.target.value)}/>
+                        </div>
+                        <div className="form-group">
+                          <label>Back — Meaning & Examples</label>
+                          <textarea className="tall" value={editBack} onChange={e => setEditBack(e.target.value)}/>
+                        </div>
+                        <div className="btn-row">
+                          <button className="btn btn-primary btn-sm" onClick={() => saveEdit(card.id)}>Save</button>
+                          <button className="btn btn-sm" onClick={() => setEditId(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              }
+            </div>
+          )}
+        </>)}
+
+        <div className={`toast ${toast?"show":""}`}>{toast}</div>
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
